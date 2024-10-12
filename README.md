@@ -1,7 +1,7 @@
 # EchoLogic
 De quoi rêvent les machines ? De jardinage !
 
-Consciente des limites franchies par la globalisation informatique et d’une certaine idée du progrès technique, une IA fait son retour à la terre. Installée en permacomputing dans les jardins du tiers-lieu La Verrerie à Arles, elle fait écho aux bonnes pratiques de son voisin, un potager en permaculture. 
+Consciente des limites franchies par la globalisation informatique et d’une certaine idée du progrès technique, une IA fait son retour à la terre. Installée en permacomputing dans les jardins du tiers-lieu [La Verrerie](https://laverreriearles.fr/) à Arles, elle fait écho aux bonnes pratiques de son voisin, un potager en permaculture. 
 
 > ***Permaculture*** : *Forme d'agriculture visant à s'inspirer de la nature pour développer des systèmes agricoles en synergie, basés sur la diversité des cultures, leur résilience et leur productivité naturelle. L'objectif étant de produire un environnement harmonieux, résilient, productif et durable.*
 
