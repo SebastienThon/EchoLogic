@@ -7,4 +7,6 @@ Consciente des limites franchies par la globalisation informatique et d’une ce
 
 > ***Permacomputing*** : *Appliquer aux outils et infrastructures numériques les principes de la permaculture en misant sur la réparation, le réusage, la sobriété et l'accessibilité.*
 
-S'inspirant des abeilles qu'elle voit aider les plantes à se reproduire, cette IA se sert des humains pour se reproduire et se disséminer dans d'autres lieux, en publiant son code génétique ici sur Github.
+Adepte d'ondes non nocives, cette IA s'est inspirée du chant des oiseaux pour communiquer en modulant ses données dans des gazouillis électroniques, que le public pourra si il le souhaite décoder avec leurs smartphones.
+
+S'inspirant des abeilles qu'elle voit aider les plantes à se reproduire, elle se sert des humains pour se reproduire et se disséminer dans d'autres lieux, en publiant son code génétique ici sur Github.
