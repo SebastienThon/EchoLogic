@@ -1,0 +1,283 @@
+<!--
+  Project: ECHO-LOGIC
+  Author: Sébastien Thon
+  Description: Web application using ggwave to decode audio payloads.
+               This file contains the UI, styles, and JS logic for RX/TX using ggwave.
+-->
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8">
+		<title>Echologic</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta http-equiv="Pragma" content="no-cache">
+		<meta http-equiv="Expires" content="-1">
+		<meta http-equiv="CACHE-CONTROL" content="NO-CACHE">
+		<style>
+			body {
+				font-family: arial;
+				background: #FFFFFF;
+			}
+
+			a {
+				color: black;
+			}
+
+			#boutons {
+				display: flex;
+				justify-content: center;
+				/* Horizontally center */
+				margin: 0;
+				/* Remove default margins */
+			}
+
+			.bouton-rond {
+				background-color: #00d293;
+				border: none;
+				/* No border */
+				color: white;
+				/* Text color */
+				text-align: center;
+				/* Center text */
+				text-decoration: none;
+				/* No underline */
+				font-size: 16px;
+				/* Font size */
+				margin: 4px 2px;
+				/* Margin */
+				cursor: pointer;
+				/* Pointer cursor */
+				border-radius: 50%;
+				/* 50% radius to make a circle */
+				width: 100px;
+				/* Button width */
+				height: 100px;
+				line-height: 100px;
+				/* Vertical text alignment */
+			}
+
+			.bouton-rond-rec {
+				background-color: #ed6660;
+				/* Background color */
+				border: none;
+				/* No border */
+				color: white;
+				/* Text color */
+				text-align: center;
+				/* Center text */
+				text-decoration: none;
+				/* No underline */
+				font-size: 16px;
+				/* Font size */
+				margin: 4px 2px;
+				/* Margin */
+				cursor: pointer;
+				/* Pointer cursor */
+				border-radius: 50%;
+				/* 50% radius to make a circle */
+				width: 100px;
+				/* Button width */
+				height: 100px;
+				line-height: 100px;
+				/* Vertical text alignment */
+			}
+		</style>
+	</head>
+	<body>
+		<div id="main-container">
+			<h1><span style="color:#00d293">ECHO</span><span style="color:#000000">LOGIC</span></h1>
+			<div><i>Approchez votre smartphone des nichoirs pour décoder leurs gazouillis électroniques.</i></div>
+			<div id="boutons"><button id="captureStart" class="bouton-rond">Ecouter</button><button id="captureStop" class="bouton-rond-rec" hidden>Arrêter</button></div>
+			<div id="rxData"></div>
+		</div>
+		<script type="text/javascript" src="ggwave.js"></script>
+		<script type='text/javascript'>
+			window.AudioContext = window.AudioContext || window.webkitAudioContext;
+			window.OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+			var context = null;
+			var recorder = null;
+			var prevMot = "";
+			var lance = false;
+			// the ggwave module instance
+			var ggwave = null;
+			var parameters = null;
+			var instance = null;
+			const kPayloadLength = 27;
+			const couleurs = ["#00d293", "#04e7a3", "#00ffb2"];
+			let compteurCouleur = 0;
+			const couleurs2 = ["#00baff", "#50cffd", "#8edffd"];
+			let compteurCouleur2 = 0;
+			const couleurs3 = ["#fe352c", "#ed6660", "#fb8a85"];
+			let compteurCouleur3 = 0;
+			const couleurs4 = ["#cfd101", "#e5e800", "#fdff65"];
+			let compteurCouleur4 = 0;
+			// instantiate the ggwave instance
+			// ggwave_factory comes from the ggwave.js module
+			ggwave_factory().then(function(obj) {
+				ggwave = obj;
+			});
+			var txData = document.getElementById("txData");
+			var rxData = document.getElementById("rxData");
+			var captureStart = document.getElementById("captureStart");
+			var captureStop = document.getElementById("captureStop");
+			// helper function
+			function convertTypedArray(src, type) {
+				var buffer = new ArrayBuffer(src.byteLength);
+				var baseView = new src.constructor(buffer).set(src);
+				return new type(buffer);
+			}
+			// initialize audio context and ggwave
+			function init() {
+				if (!context) {
+					context = new AudioContext({
+						sampleRate: 48000
+					});
+					parameters = ggwave.getDefaultParameters();
+					parameters.payloadLength = kPayloadLength;
+					parameters.samplesPerFrame = 1024;
+					parameters.sampleRateInp = context.sampleRate;
+					parameters.sampleRateOut = context.sampleRate;
+					parameters.operatingMode = ggwave.GGWAVE_OPERATING_MODE_RX_AND_TX | ggwave.GGWAVE_OPERATING_MODE_USE_DSS;
+					instance = ggwave.init(parameters);
+				}
+			}
+			//
+			// Tx
+			//
+			function onSend() {
+				init();
+				// pause audio capture during transmission
+				captureStop.click();
+				// generate audio waveform		
+				var waveform = ggwave.encode(instance, txData.value, ggwave.ProtocolId.GGWAVE_PROTOCOL_MT_FASTEST, 10)
+				// play audio
+				var buf = convertTypedArray(waveform, Float32Array);
+				var buffer = context.createBuffer(1, buf.length, context.sampleRate);
+				buffer.getChannelData(0).set(buf);
+				var source = context.createBufferSource();
+				source.buffer = buffer;
+				source.connect(context.destination);
+				source.start(0);
+			}
+			//
+			// Rx
+			//
+			captureStart.addEventListener("click", function() {
+				init();
+				let constraints = {
+					audio: {
+						// not sure if these are necessary to have
+						echoCancellation: false,
+						autoGainControl: false,
+						noiseSuppression: false
+					}
+				};
+				navigator.mediaDevices.getUserMedia(constraints).then(function(e) {
+					mediaStream = context.createMediaStreamSource(e);
+					var bufferSize = 1024;
+					var numberOfInputChannels = 1;
+					var numberOfOutputChannels = 1;
+					if (context.createScriptProcessor) {
+						recorder = context.createScriptProcessor(bufferSize, numberOfInputChannels, numberOfOutputChannels);
+					} else {
+						recorder = context.createJavaScriptNode(bufferSize, numberOfInputChannels, numberOfOutputChannels);
+					}
+					recorder.onaudioprocess = function(e) {
+						var source = e.inputBuffer;
+						var res = ggwave.decode(instance, convertTypedArray(new Float32Array(source.getChannelData(0)), Int8Array));
+						if (res && res.length == kPayloadLength) {
+							// DSS
+							var payload = "";
+							res8 = convertTypedArray(res, Uint8Array);
+							for (var i = 0; i < kPayloadLength; i++) {
+								payload += String.fromCharCode(res8[i]);
+								if (res8[i] == 0) {
+									break;
+								}
+							}
+							console.log(res8);
+							res = payload;
+							if (res == prevMot) {
+								return;
+							} else {
+								prevMot = res;
+							}
+
+							var nouveauSpan = document.createElement("span");
+							if (res.charAt(0) === '*') {
+								nouveauSpan.textContent = res.substring(1) + " ";
+								// Change background color of the new text
+								nouveauSpan.style.backgroundColor = "#000000";
+								nouveauSpan.style.color = "#ffffff";
+								var tailleAleatoire = "1.5em";
+								nouveauSpan.style.fontSize = tailleAleatoire;
+							} else if (res.charAt(0) === '+') {
+								nouveauSpan.textContent = res.substring(1) + " ";
+								// Change background color of the new text
+								nouveauSpan.style.backgroundColor = couleurs2[compteurCouleur2];
+								// Increment color index
+								compteurCouleur2 = (compteurCouleur2 + 1) % couleurs2.length;
+								// Set a random font size between 1em and 2em
+								var tailleAleatoire = (Math.random() * 0.7 + 0.8) + "em";
+								nouveauSpan.style.fontSize = tailleAleatoire;
+							} else if (res.charAt(0) === '-') {
+								nouveauSpan.textContent = res.substring(1) + " ";
+								// Change background color of the new text
+								nouveauSpan.style.backgroundColor = couleurs3[compteurCouleur3];
+								nouveauSpan.style.color = "#ffffff";
+								// Increment color index
+								compteurCouleur3 = (compteurCouleur3 + 1) % couleurs3.length;
+								// Set a random font size
+								var tailleAleatoire = (Math.random() * 0.7 + 0.8) + "em";
+								nouveauSpan.style.fontSize = tailleAleatoire;
+							} else if (res.charAt(0) === '!') {
+								if (res.includes("github")) {
+									nouveauSpan.innerHTML = '<a href="https://github.com/SebastienThon/EchoLogic">https://github.com/SebastienThon/EchoLogic</a> ';
+									nouveauSpan.style.fontSize = "1.0em";
+								} else {
+									nouveauSpan.textContent = res.substring(1) + " ";
+									// Set a random font size
+									var tailleAleatoire = (Math.random() * 0.7 + 0.8) + "em";
+									nouveauSpan.style.fontSize = tailleAleatoire;
+								}
+								// Change background color of the new text
+								nouveauSpan.style.backgroundColor = couleurs4[compteurCouleur4];
+								// Increment color index
+								compteurCouleur4 = (compteurCouleur4 + 1) % couleurs4.length;
+							} else {
+								nouveauSpan.textContent = res + " ";
+								// Change background color of the new text
+								nouveauSpan.style.backgroundColor = couleurs[compteurCouleur];
+								// Increment color index
+								compteurCouleur = (compteurCouleur + 1) % couleurs.length;
+								// Set a random font size between 1em and 2em
+								var tailleAleatoire = (Math.random() * 0.7 + 0.8) + "em";
+								nouveauSpan.style.fontSize = tailleAleatoire;
+							}
+							// Append the new <span> to the <div>
+							rxData.appendChild(nouveauSpan);
+						}
+					}
+					mediaStream.connect(recorder);
+					recorder.connect(context.destination);
+				}).catch(function(e) {
+					console.error(e);
+				});
+				rxData.value = 'Listening ...';
+				captureStart.hidden = true;
+				captureStop.hidden = false;
+			});
+			captureStop.addEventListener("click", function() {
+				if (recorder) {
+					recorder.disconnect(context.destination);
+					mediaStream.disconnect(recorder);
+					recorder = null;
+				}
+				rxData.value = 'Audio capture is paused! Press the "Start capturing" button to analyze audio from the microphone';
+				captureStart.hidden = false;
+				captureStop.hidden = true;
+			});
+			captureStop.click();
+		</script>
+	</body>
+</html>
